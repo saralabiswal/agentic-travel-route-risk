@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v7
       - name: Scan committed secrets
         uses: gitleaks/gitleaks-action@v3
-      - uses: astral-sh/setup-uv@v9
+      - uses: astral-sh/setup-uv@v9.0.0
         with:
           version: "latest"
       - run: uv sync --all-groups --frozen
@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v9
+      - uses: astral-sh/setup-uv@v9.0.0
         with:
           version: "latest"
       - run: uv sync --all-groups --frozen
