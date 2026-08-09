@@ -1,0 +1,58 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile
+    ports:
+      - "8000:8080"
+    environment:
+      LLM_ENABLED: ${LLM_ENABLED:-false}
+      REACT_TOOL_CALLS_ENABLED: ${REACT_TOOL_CALLS_ENABLED:-false}
+      NOTIFICATIONS_ENABLED: "false"
+      DEMO_EVIDENCE_ENABLED: "false"
+      DATABASE_URL: postgresql+asyncpg://routeshield:local-only@postgres:5432/routeshield
+      REDIS_URL: redis://redis:6379/0
+      WEB_ORIGIN: http://127.0.0.1:8080,http://localhost:8080
+      API_RATE_LIMIT: "120"
+      PROVIDER_AMADEUS_ENABLED: "true"
+      AMADEUS_FLIGHT_STATUS_URL: http://mock-provider:8080/v1/flight-status
+      PROVIDER_FAA_ENABLED: "true"
+      FAA_NAS_STATUS_URL: http://mock-provider:8080/v1/airport-weather
+      PROVIDER_NWS_ENABLED: "true"
+      NWS_ALERTS_URL: http://mock-provider:8080/v1/airport-weather
+      PROVIDER_AVIATION_WEATHER_ENABLED: "true"
+      AVIATION_WEATHER_URL: http://mock-provider:8080/v1/airport-weather
+      PROVIDER_GOOGLE_ROUTES_ENABLED: "true"
+      GOOGLE_ROUTES_URL: http://mock-provider:8080/v1/ground-route
+      PROVIDER_DESTINATION_ADVISORY_ENABLED: "true"
+      DESTINATION_ADVISORY_URL: http://mock-provider:8080/v1/destination-advisory
+    depends_on:
+      - postgres
+      - redis
+      - mock-provider
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile
+    command: [".venv/bin/python", "-m", "uvicorn", "apps.web.server:app", "--host", "0.0.0.0", "--port", "8080"]
+    ports:
+      - "8080:8080"
+    environment:
+      PUBLIC_API_BASE_URL: http://127.0.0.1:8000
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: routeshield
+      POSTGRES_PASSWORD: local-only
+      POSTGRES_DB: routeshield
+    ports:
+      - "5432:5432"
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+  mock-provider:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile
+    command: [".venv/bin/python", "-m", "uvicorn", "apps.mock_provider.main:app", "--host", "0.0.0.0", "--port", "8080"]

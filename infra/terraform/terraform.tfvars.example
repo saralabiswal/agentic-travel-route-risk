@@ -1,0 +1,19 @@
+# Copy to a secured deployment configuration; never commit a real tfvars file.
+project_id  = "replace-with-approved-project"
+region      = "us-central1"
+environment = "staging"
+image       = "us-central1-docker.pkg.dev/PROJECT/routeshield/routeshield@sha256:REPLACE"
+web_image   = "" # Reuses image when the console is built into the API image.
+
+# Set both values after the approved public API and DNS name are available.
+web_api_base_url = "https://api.example.com"
+web_domain       = "routeshield.example.com"
+audit_retention_days = 365
+
+oidc_issuer   = "https://issuer.example.com"
+oidc_audience = "routeshield-api"
+oidc_jwks_url = "https://issuer.example.com/.well-known/jwks.json"
+
+runtime_invoker_members = [
+  "group:routeshield-operators@example.com",
+]

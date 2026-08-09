@@ -1,0 +1,56 @@
+name: Deploy staging
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: routeshield-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment: staging
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      REGION: ${{ vars.GCP_REGION }}
+      ENVIRONMENT: staging
+      TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+      TF_VAR_runtime_invoker_members: '["serviceAccount:${{ secrets.GCP_DEPLOYER_SERVICE_ACCOUNT }}"]'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOYER_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - uses: hashicorp/setup-terraform@v3
+      - name: Initialize Terraform
+        run: terraform -chdir=infra/terraform init -input=false -backend-config="bucket=$TF_STATE_BUCKET" -backend-config="prefix=routeshield/staging"
+      - name: Provision Artifact Registry on first deployment
+        run: terraform -chdir=infra/terraform apply -auto-approve -input=false -target=google_artifact_registry_repository.containers -var="project_id=$PROJECT_ID" -var="region=$REGION" -var="environment=$ENVIRONMENT" -var="image=us-docker.pkg.dev/cloudrun/container/hello" -var="web_domain=${{ vars.WEB_DOMAIN }}" -var="web_api_base_url=${{ vars.WEB_API_BASE_URL }}" -var="oidc_issuer=${{ vars.OIDC_ISSUER }}" -var="oidc_audience=${{ vars.OIDC_AUDIENCE }}" -var="oidc_jwks_url=${{ vars.OIDC_JWKS_URL }}"
+      - name: Build and push immutable image
+        env:
+          IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/routeshield/routeshield:${{ github.sha }}
+        run: |
+          gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+          docker build --file infra/docker/Dockerfile --tag "$IMAGE" .
+          docker push "$IMAGE"
+      - name: Apply staging infrastructure and revision
+        env:
+          IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/routeshield/routeshield:${{ github.sha }}
+        run: terraform -chdir=infra/terraform apply -auto-approve -input=false -var="project_id=$PROJECT_ID" -var="region=$REGION" -var="environment=$ENVIRONMENT" -var="image=$IMAGE" -var="web_domain=${{ vars.WEB_DOMAIN }}" -var="web_api_base_url=${{ vars.WEB_API_BASE_URL }}" -var="oidc_issuer=${{ vars.OIDC_ISSUER }}" -var="oidc_audience=${{ vars.OIDC_AUDIENCE }}" -var="oidc_jwks_url=${{ vars.OIDC_JWKS_URL }}"
+      - name: Run additive database migration
+        run: |
+          JOB=$(terraform -chdir=infra/terraform output -raw migration_job_name)
+          gcloud run jobs execute "$JOB" --region "$REGION" --wait
+      - name: Smoke test authenticated API
+        run: |
+          URI=$(terraform -chdir=infra/terraform output -raw cloud_run_uri)
+          curl --fail --silent --show-error --header "Authorization: Bearer $(gcloud auth print-identity-token)" "$URI/health"

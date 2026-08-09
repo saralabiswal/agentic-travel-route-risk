@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>RouteShield Operations Console</title>
+    <link rel="stylesheet" href="/console/styles.css?v=20260809-2" />
+  </head>
+  <body>
+    <header class="app-header">
+      <a class="brand" href="/console/" aria-label="RouteShield operations home">
+        <span class="brand-mark" aria-hidden="true">R</span>
+        <span><span class="eyebrow">RouteShield</span><strong>Travel risk operations</strong></span>
+      </a>
+      <div class="header-copy">
+        <p class="header-title">Resolve disruptions with confidence</p>
+        <p>Review evidence, make the decision, then communicate clearly.</p>
+      </div>
+      <details class="workspace-settings">
+        <summary><span class="status-dot" aria-hidden="true"></span><span id="workspace-summary">Workspace: acme · Travel manager</span></summary>
+        <form id="session-form" class="session" aria-label="Workspace access settings">
+          <label>Tenant <input id="tenant-id" value="acme" required /></label>
+          <label>Role
+            <select id="role">
+              <option value="travel_manager">Travel manager</option>
+              <option value="duty_of_care">Duty of care</option>
+              <option value="tenant_admin">Tenant admin</option>
+              <option value="traveler">Traveler</option>
+            </select>
+          </label>
+          <label>Actor <input id="actor-id" value="manager-1" required /></label>
+          <label>Bearer token <input id="bearer-token" type="password" autocomplete="off" placeholder="Optional in local mode" /></label>
+          <button type="submit" class="secondary">Apply workspace</button>
+        </form>
+      </details>
+    </header>
+
+    <main>
+      <section class="flow-intro" aria-labelledby="flow-title">
+        <div>
+          <p class="eyebrow">Your operating flow</p>
+          <h1 id="flow-title">Work one incident from signal to safe action</h1>
+        </div>
+        <ol class="flow-steps">
+          <li><span>1</span><strong>Review the queue</strong><small>Start with the highest priority risk.</small></li>
+          <li><span>2</span><strong>Understand why</strong><small>Check evidence, itinerary, and policy-safe options.</small></li>
+          <li><span>3</span><strong>Record a decision</strong><small>Approve or reject; RouteShield never books automatically.</small></li>
+          <li><span>4</span><strong>Communicate</strong><small>Preview the traveler message and queue it when ready.</small></li>
+        </ol>
+      </section>
+
+      <div id="notice" class="notice" role="status">Loading your workspace…</div>
+
+      <section class="metrics" aria-label="Queue health">
+        <article><span class="metric-label">Incidents requiring attention</span><strong id="metric-open">—</strong><small>Open items in your queue</small></article>
+        <article><span class="metric-label">High-priority risks</span><strong id="metric-high">—</strong><small>High and critical incidents</small></article>
+        <article><span class="metric-label">Queue updated</span><strong id="metric-freshness">Not yet</strong><small id="connection-status">Checking API connection</small></article>
+      </section>
+
+      <section class="workbench" aria-label="Incident decision workspace">
+        <aside class="panel queue-panel" aria-labelledby="queue-title">
+          <div class="panel-heading">
+            <div><p class="step-label">Step 1</p><h2 id="queue-title">Review priority queue</h2></div>
+            <button id="refresh-queue" type="button" class="secondary">Refresh</button>
+          </div>
+          <p class="panel-intro">Choose an incident to open its evidence and decision workspace.</p>
+          <div class="queue-filters" aria-label="Filter manager queue">
+            <label>Severity
+              <select id="severity-filter"><option value="all">All severities</option><option value="critical">Critical</option><option value="high">High</option><option value="watch">Watch</option><option value="low">Low</option></select>
+            </label>
+            <label>Status
+              <select id="status-filter"><option value="all">All statuses</option><option value="pending_approval">Needs decision</option><option value="open">Open</option><option value="approved">Approved</option><option value="resolved">Resolved</option></select>
+            </label>
+          </div>
+          <div class="queue-summary"><span id="queue-count">0</span> incident(s) shown</div>
+          <div id="incident-queue" class="incident-list" aria-live="polite"></div>
+        </aside>
+
+        <section class="panel detail-panel" aria-labelledby="detail-title">
+          <div class="panel-heading">
+            <div><p class="step-label">Step 2–3</p><h2 id="detail-title">Understand and decide</h2></div>
+            <span id="incident-status" class="badge">Select an incident</span>
+          </div>
+          <div id="incident-detail" class="decision-empty" aria-live="polite">
+            <div class="empty-icon" aria-hidden="true">↗</div>
+            <h3>Select an incident from the queue</h3>
+            <p>Its risk explanation, itinerary, evidence, and policy-safe recovery options will appear here.</p>
+          </div>
+          <form id="decision-form" class="decision-form hidden">
+            <label>Why are you making this decision?
+              <textarea id="decision-reason" minlength="1" maxlength="1000" placeholder="For example: confirmed delay with the carrier; approve the first eligible alternative." required></textarea>
+            </label>
+            <div class="decision-guidance"><strong>Human approval required.</strong> This records your decision; it does not make a booking or payment.</div>
+            <div class="actions"><button type="submit" data-decision="approve" class="primary">Approve recommendation</button><button type="submit" data-decision="reject" class="danger">Reject and keep current itinerary</button></div>
+          </form>
+        </section>
+
+        <aside class="right-rail" aria-label="Incident follow-up">
+          <section class="panel communication-panel" aria-labelledby="communication-title">
+            <div class="panel-heading"><div><p class="step-label">Step 4</p><h2 id="communication-title">Communicate clearly</h2></div></div>
+            <div id="notification-preview" class="empty">Select an incident to preview the traveler-safe message.</div>
+            <button id="queue-notification" class="hidden primary" type="button">Queue in-app notification</button>
+            <div id="notification-history" class="notification-history" aria-live="polite"></div>
+          </section>
+          <section class="panel timeline-panel" aria-labelledby="timeline-title">
+            <div class="panel-heading"><div><p class="step-label">Audit trail</p><h2 id="timeline-title">What happened</h2></div></div>
+            <ol id="timeline" class="timeline-list"><li class="empty">Choose an incident to see its timeline.</li></ol>
+          </section>
+        </aside>
+      </section>
+
+      <details class="secondary-tools">
+        <summary>Optional: traveler preferences and memory</summary>
+        <div class="secondary-tools-content">
+          <p>Use this only when a traveler’s confirmed preferences are relevant to the decision.</p>
+          <form id="preferences-form" class="preferences-form">
+            <label>Traveler ID <input id="traveler-id" placeholder="traveler-1" required /></label>
+            <div class="actions"><button type="submit" class="secondary">Load preferences</button><button id="delete-memory" type="button" class="quiet">Delete preference memory</button></div>
+          </form>
+          <pre id="preferences-result" class="data-preview">No profile loaded.</pre>
+        </div>
+      </details>
+    </main>
+    <script src="/runtime-config.js"></script>
+    <script type="module" src="/console/app.js?v=20260809-2"></script>
+  </body>
+</html>

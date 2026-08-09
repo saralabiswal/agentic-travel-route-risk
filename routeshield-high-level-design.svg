@@ -1,0 +1,224 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1040" viewBox="0 0 1600 1040" role="img" aria-labelledby="title desc">
+  <title id="title">RouteShield high-level production architecture</title>
+  <desc id="desc">A high-level design of the Corporate Travel Route-Risk and Disruption Agent. Live travel data enters a GCP-hosted RouteShield application. Deterministic risk and policy services control a bounded LangGraph ReAct investigation. An optional learned recovery ranker orders eligible alternatives. Human approval gates all external actions.</desc>
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="125%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="7" flood-color="#102a43" flood-opacity="0.12"/>
+    </filter>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2367a6"/>
+    </marker>
+    <marker id="arrow-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7557b8"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#25805f"/>
+    </marker>
+    <marker id="arrow-orange" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#b45d19"/>
+    </marker>
+    <style>
+      text { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #102a43; }
+      .kicker { font-size: 15px; font-weight: 700; fill: #2367a6; letter-spacing: 1.5px; }
+      .title { font-size: 33px; font-weight: 800; }
+      .subtitle { font-size: 16px; fill: #526d82; }
+      .region-title { font-size: 18px; font-weight: 800; fill: #174b78; }
+      .region-subtitle { font-size: 13px; font-weight: 600; fill: #54718a; }
+      .node-title { font-size: 15px; font-weight: 800; }
+      .node-text { font-size: 12.5px; fill: #3f5b70; }
+      .node-tiny { font-size: 11px; fill: #54718a; }
+      .smallcaps { font-size: 10.5px; font-weight: 800; letter-spacing: .8px; fill: #54718a; }
+      .edge-label { font-size: 11px; font-weight: 700; fill: #54718a; }
+      .footer { font-size: 12px; fill: #54718a; }
+      .external { fill: #ffffff; stroke: #9bb9cd; stroke-width: 1.5; }
+      .service { fill: #ffffff; stroke: #7db4d6; stroke-width: 1.5; }
+      .control { fill: #edf8f2; stroke: #58a883; stroke-width: 1.7; }
+      .agent { fill: #eef6ff; stroke: #5394c8; stroke-width: 1.7; }
+      .ml { fill: #f6f0ff; stroke: #9b7bd1; stroke-width: 1.7; stroke-dasharray: 6 4; }
+      .storage { fill: #f5f8fa; stroke: #9bb9cd; stroke-width: 1.4; }
+      .callout { fill: #fff8ed; stroke: #dea462; stroke-width: 1.4; }
+      .line { fill: none; stroke: #2367a6; stroke-width: 2; marker-end: url(#arrow-blue); }
+      .line-green { fill: none; stroke: #25805f; stroke-width: 2.2; marker-end: url(#arrow-green); }
+      .line-purple { fill: none; stroke: #7557b8; stroke-width: 2; stroke-dasharray: 6 4; marker-end: url(#arrow-purple); }
+      .line-orange { fill: none; stroke: #b45d19; stroke-width: 1.8; stroke-dasharray: 5 4; marker-end: url(#arrow-orange); }
+      .line-muted { fill: none; stroke: #7894a8; stroke-width: 1.6; marker-end: url(#arrow-blue); }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1040" fill="#f7fafc"/>
+  <rect x="0" y="0" width="1600" height="126" fill="#ffffff"/>
+  <rect x="0" y="124" width="1600" height="2" fill="#d8e7f0"/>
+  <text x="56" y="44" class="kicker">PRODUCT ARCHITECTURE · GCP</text>
+  <text x="56" y="83" class="title">RouteShield — Corporate Travel Route-Risk &amp; Disruption Agent</text>
+  <text x="56" y="110" class="subtitle">Bounded agentic investigation, deterministic controls, governed learned recovery ranking, and human-approved action.</text>
+
+  <!-- External signals -->
+  <text x="55" y="180" class="smallcaps">LIVE SIGNALS &amp; USERS</text>
+  <rect x="55" y="200" rx="12" ry="12" width="255" height="92" class="external" filter="url(#shadow)"/>
+  <circle cx="84" cy="230" r="14" fill="#dbeefa"/>
+  <path d="M77 229h14M84 222v14" stroke="#2367a6" stroke-width="2" stroke-linecap="round"/>
+  <text x="108" y="229" class="node-title">Itinerary &amp; booking events</text>
+  <text x="108" y="250" class="node-text">CSV, API/webhook, traveler context</text>
+  <text x="108" y="270" class="node-tiny">Trip changes initiate monitoring</text>
+
+  <rect x="55" y="315" rx="12" ry="12" width="255" height="104" class="external" filter="url(#shadow)"/>
+  <circle cx="84" cy="347" r="14" fill="#dbeefa"/>
+  <path d="M76 347h17M84 339v16" stroke="#2367a6" stroke-width="2" stroke-linecap="round"/>
+  <text x="108" y="344" class="node-title">Travel &amp; disruption providers</text>
+  <text x="108" y="366" class="node-text">Flight status · alternatives · weather</text>
+  <text x="108" y="386" class="node-text">Aviation weather · routes · advisories</text>
+  <text x="108" y="405" class="node-tiny">Validated provider adapters only</text>
+
+  <rect x="55" y="444" rx="12" ry="12" width="255" height="92" class="external" filter="url(#shadow)"/>
+  <circle cx="84" cy="474" r="14" fill="#dbeefa"/>
+  <path d="M77 478c4-10 10-10 14 0M80 470a4 4 0 1 1 8 0" stroke="#2367a6" stroke-width="2" stroke-linecap="round" fill="none"/>
+  <text x="108" y="472" class="node-title">Travel manager &amp; traveler</text>
+  <text x="108" y="494" class="node-text">Dashboard, questions, approvals</text>
+  <text x="108" y="514" class="node-tiny">Authenticated, tenant-scoped access</text>
+
+  <rect x="55" y="562" rx="12" ry="12" width="255" height="92" class="external" filter="url(#shadow)"/>
+  <circle cx="84" cy="592" r="14" fill="#fff0df"/>
+  <path d="M77 592h14M84 585v14" stroke="#b45d19" stroke-width="2" stroke-linecap="round"/>
+  <text x="108" y="590" class="node-title">OpenAI Responses API</text>
+  <text x="108" y="612" class="node-text">Server-side model invocation only</text>
+  <text x="108" y="632" class="node-tiny">No provider key or direct browser access</text>
+
+  <!-- GCP boundary -->
+  <rect x="360" y="160" rx="20" ry="20" width="900" height="770" fill="#eef6fb" stroke="#75a9cb" stroke-width="2"/>
+  <path d="M360 214h900" stroke="#c5deed" stroke-width="1.5"/>
+  <text x="392" y="194" class="region-title">RouteShield production environment</text>
+  <text x="792" y="194" class="region-subtitle">Google Cloud Platform · tenant-isolated · observable</text>
+
+  <!-- Entry and orchestration -->
+  <rect x="400" y="244" rx="12" ry="12" width="178" height="102" class="service" filter="url(#shadow)"/>
+  <text x="421" y="273" class="smallcaps">CLOUD RUN</text>
+  <text x="421" y="298" class="node-title">Web + API edge</text>
+  <text x="421" y="319" class="node-text">Next.js · FastAPI · OIDC</text>
+
+  <rect x="618" y="244" rx="12" ry="12" width="210" height="102" class="service" filter="url(#shadow)"/>
+  <text x="639" y="273" class="smallcaps">SCHEDULER · PUB/SUB · JOBS</text>
+  <text x="639" y="298" class="node-title">Monitoring &amp; intake</text>
+  <text x="639" y="319" class="node-text">Refresh, webhook, and event routing</text>
+
+  <rect x="868" y="244" rx="12" ry="12" width="350" height="102" class="control" filter="url(#shadow)"/>
+  <text x="890" y="273" class="smallcaps">DETERMINISTIC CONTROL PLANE</text>
+  <text x="890" y="298" class="node-title">Evidence validation + risk engine</text>
+  <text x="890" y="319" class="node-text">Freshness · source health · severity · policy rules</text>
+
+  <!-- Central decision row -->
+  <rect x="400" y="405" rx="14" ry="14" width="292" height="198" class="agent" filter="url(#shadow)"/>
+  <text x="425" y="435" class="smallcaps">CLOUD RUN · LANGCHAIN + LANGGRAPH</text>
+  <text x="425" y="465" class="node-title">Bounded ReAct investigation</text>
+  <text x="425" y="492" class="node-text">Observes validated trip evidence</text>
+  <text x="425" y="514" class="node-text">Calls approved read-only tools</text>
+  <text x="425" y="536" class="node-text">Max. 3 tool iterations / 2 completions</text>
+  <rect x="425" y="553" rx="8" ry="8" width="238" height="30" fill="#dceefa"/>
+  <text x="439" y="573" class="node-tiny">Cannot write, book, or override policy</text>
+
+  <rect x="732" y="405" rx="14" ry="14" width="218" height="198" class="control" filter="url(#shadow)"/>
+  <text x="754" y="435" class="smallcaps">GRAPH-OWNED NODE</text>
+  <text x="754" y="465" class="node-title">Eligibility &amp; policy gate</text>
+  <text x="754" y="492" class="node-text">Complete candidate set</text>
+  <text x="754" y="514" class="node-text">Availability, connection,</text>
+  <text x="754" y="536" class="node-text">policy &amp; accessibility checks</text>
+  <rect x="754" y="553" rx="8" ry="8" width="171" height="30" fill="#dff3e9"/>
+  <text x="771" y="573" class="node-tiny">Hard constraints win</text>
+
+  <rect x="990" y="405" rx="14" ry="14" width="228" height="198" class="ml" filter="url(#shadow)"/>
+  <text x="1012" y="435" class="smallcaps">PHASE 2 · INTERNAL CLOUD RUN</text>
+  <text x="1012" y="465" class="node-title">Learned Recovery Ranker</text>
+  <text x="1012" y="492" class="node-text">Teacher → distilled student</text>
+  <text x="1012" y="514" class="node-text">Ranks eligible alternatives</text>
+  <text x="1012" y="536" class="node-text">Model/data/schema identity</text>
+  <rect x="1012" y="553" rx="8" ry="8" width="178" height="30" fill="#ede4ff"/>
+  <text x="1027" y="573" class="node-tiny">Fallback: deterministic score</text>
+
+  <!-- Human control and output -->
+  <rect x="400" y="654" rx="14" ry="14" width="304" height="122" class="control" filter="url(#shadow)"/>
+  <text x="424" y="684" class="smallcaps">LANGGRAPH INTERRUPT</text>
+  <text x="424" y="713" class="node-title">Manager review &amp; approval</text>
+  <text x="424" y="738" class="node-text">Evidence, policy, recommendation, preview</text>
+  <text x="424" y="758" class="node-tiny">Required for booking, spend, exceptions, escalation</text>
+
+  <rect x="744" y="654" rx="14" ry="14" width="474" height="122" class="service" filter="url(#shadow)"/>
+  <text x="770" y="684" class="smallcaps">CONTROLLED SIDE-EFFECT PATH</text>
+  <text x="770" y="713" class="node-title">Action request &amp; communications</text>
+  <text x="770" y="738" class="node-text">Manager queue · traveler notification · booking-action request</text>
+  <text x="770" y="758" class="node-tiny">Only graph-owned, idempotent dispatch after relevant approval</text>
+
+  <!-- Shared platform services -->
+  <text x="400" y="822" class="smallcaps">PERSISTENCE, SECURITY &amp; OPERATIONS</text>
+  <rect x="400" y="842" rx="10" ry="10" width="190" height="61" class="storage"/>
+  <text x="417" y="868" class="node-title">Cloud SQL / PostgreSQL</text>
+  <text x="417" y="887" class="node-tiny">Trips, evidence, audit, checkpoints</text>
+
+  <rect x="607" y="842" rx="10" ry="10" width="178" height="61" class="storage"/>
+  <text x="625" y="868" class="node-title">Memorystore</text>
+  <text x="625" y="887" class="node-tiny">Cache, locks, rate limits</text>
+
+  <rect x="802" y="842" rx="10" ry="10" width="188" height="61" class="storage"/>
+  <text x="820" y="868" class="node-title">Cloud Storage</text>
+  <text x="820" y="887" class="node-tiny">Fixtures, evidence, model bundles</text>
+
+  <rect x="1007" y="842" rx="10" ry="10" width="211" height="61" class="storage"/>
+  <text x="1025" y="868" class="node-title">Secrets + Observability</text>
+  <text x="1025" y="887" class="node-tiny">IAM, logs, metrics, traces, alerts</text>
+
+  <!-- Boundary callout -->
+  <rect x="1295" y="244" rx="14" ry="14" width="248" height="246" class="callout" filter="url(#shadow)"/>
+  <text x="1320" y="278" class="smallcaps" fill="#9a4a0c">SAFETY BOUNDARY</text>
+  <text x="1320" y="310" class="node-title">Decision ownership</text>
+  <text x="1320" y="342" class="node-text">1. Risk &amp; constraints</text>
+  <text x="1340" y="362" class="node-tiny">Deterministic services</text>
+  <text x="1320" y="391" class="node-text">2. Option ordering</text>
+  <text x="1340" y="411" class="node-tiny">Score or learned ranker</text>
+  <text x="1320" y="440" class="node-text">3. Explanation &amp; escalation</text>
+  <text x="1340" y="460" class="node-tiny">Bounded ReAct agent</text>
+
+  <rect x="1295" y="522" rx="14" ry="14" width="248" height="160" class="callout" filter="url(#shadow)"/>
+  <text x="1320" y="555" class="smallcaps" fill="#9a4a0c">HUMAN-IN-THE-LOOP</text>
+  <text x="1320" y="585" class="node-title">No autonomous booking</text>
+  <text x="1320" y="612" class="node-text">Approval is required for:</text>
+  <text x="1320" y="634" class="node-tiny">spend · rebooking · exceptions</text>
+  <text x="1320" y="654" class="node-tiny">critical duty-of-care escalation</text>
+
+  <!-- Connections -->
+  <path d="M310 246 H372 Q384 246 400 270" class="line"/>
+  <path d="M310 366 H372 Q384 366 400 310" class="line"/>
+  <path d="M310 490 H384 Q391 490 400 487" class="line"/>
+  <path d="M578 295 H618" class="line"/>
+  <path d="M828 295 H868" class="line"/>
+  <path d="M1043 346 V384 Q1043 394 952 442" class="line"/>
+  <path d="M868 346 V380 Q868 392 836 405" class="line-green"/>
+  <path d="M692 504 H732" class="line"/>
+  <path d="M950 504 H990" class="line-purple"/>
+  <path d="M1104 405 V368 Q1104 356 950 356 L560 356 Q548 356 548 405" class="line-purple"/>
+  <path d="M836 603 V630 Q836 643 704 685" class="line-green"/>
+  <path d="M552 603 V637 Q552 645 552 654" class="line-green"/>
+  <path d="M704 715 H744" class="line-green"/>
+  <path d="M310 606 H370 Q385 606 400 540" class="line-orange"/>
+  <path d="M590 872 H607" class="line-muted"/>
+  <path d="M785 872 H802" class="line-muted"/>
+  <path d="M990 872 H1007" class="line-muted"/>
+  <path d="M1295 370 H1230 Q1220 370 1218 405" class="line-orange"/>
+  <path d="M1295 602 H1240 Q1226 602 1218 695" class="line-orange"/>
+
+  <text x="632" y="390" class="edge-label">validated evidence</text>
+  <text x="970" y="390" class="edge-label">eligible candidates</text>
+  <text x="742" y="349" class="edge-label">ranked options returned to assistant</text>
+  <text x="719" y="643" class="edge-label">approval required</text>
+  <text x="580" y="663" class="edge-label">policy result</text>
+  <text x="314" y="586" class="edge-label">server-side</text>
+
+  <!-- Legend -->
+  <rect x="55" y="950" rx="10" ry="10" width="1490" height="52" fill="#ffffff" stroke="#d8e7f0"/>
+  <text x="78" y="981" class="smallcaps">LEGEND</text>
+  <line x1="172" y1="976" x2="215" y2="976" class="line"/>
+  <text x="229" y="981" class="footer">Validated data / service flow</text>
+  <line x1="465" y1="976" x2="508" y2="976" class="line-purple"/>
+  <text x="522" y="981" class="footer">Optional Phase 2 learned ranking</text>
+  <line x1="802" y1="976" x2="845" y2="976" class="line-green"/>
+  <text x="859" y="981" class="footer">Deterministic policy or human-control flow</text>
+  <line x1="1194" y1="976" x2="1237" y2="976" class="line-orange"/>
+  <text x="1251" y="981" class="footer">External model / governance boundary</text>
+</svg>
