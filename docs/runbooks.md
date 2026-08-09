@@ -103,10 +103,11 @@ targeted applies.
 
 1. Run the CI quality gates. They must pass Ruff, tests, secret/dependency scans, the
    container build, and Terraform formatting/validation.
-2. Trigger **Deploy staging** by merging to `main` or running the workflow manually. It
+2. After the staging environment variables, secrets, runtime secret values, and approvals
+   above are in place, trigger **Deploy staging** manually from the GitHub Actions tab. It
    provisions Artifact Registry when needed, builds and pushes an immutable image, applies
    Terraform, runs the additive migration Cloud Run Job, and calls the authenticated
-   `/health` endpoint.
+   `/health` endpoint. Pushes to `main` run CI only; they never attempt a cloud deployment.
 3. Verify that the API and console use OIDC tokens with correct tenant and role claims;
    header-only development authentication must not work in this environment.
 4. Verify Cloud SQL persistence, Redis rate limiting, Cloud Storage upload quarantine,
