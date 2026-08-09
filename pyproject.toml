@@ -6,14 +6,14 @@ authors = [{ name = "Sarala Biswal" }]
 requires-python = ">=3.11"
 dependencies = [
   "asyncpg>=0.31.0",
-  "cryptography>=49.0.0",
+  "cryptography>=50.0.0",
   "fastapi>=0.115,<1",
   "greenlet>=3.5.3",
   "httpx>=0.28.1",
   "langchain>=1.3.13",
   "langchain-openai>=1.3.5",
   "langgraph>=1.2.9",
-  "langgraph-checkpoint-postgres>=3.1.0",
+  "langgraph-checkpoint-postgres>=3.1.1",
   "psycopg[binary]>=3.3.4",
   "pydantic>=2.8,<3",
   "pyjwt>=2.13.0",
@@ -25,7 +25,8 @@ dependencies = [
 [dependency-groups]
 dev = [
   "httpx>=0.27,<1",
-  "pytest>=8.3,<9",
+  "pip-audit>=2.10.1,<3",
+  "pytest>=9.0.3,<10",
   "ruff>=0.6,<1",
 ]
 

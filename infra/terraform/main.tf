@@ -79,23 +79,23 @@ variable "notification_channels" {
 }
 
 variable "min_instances" {
-  type        = number
-  default     = 0
+  type    = number
+  default = 0
 }
 
 variable "max_instances" {
-  type        = number
-  default     = 10
+  type    = number
+  default = 10
 }
 
 variable "sql_tier" {
-  type        = string
-  default     = "db-custom-2-7680"
+  type    = string
+  default = "db-custom-2-7680"
 }
 
 variable "redis_memory_size_gb" {
-  type        = number
-  default     = 1
+  type    = number
+  default = 1
 }
 
 variable "retention_days" {
@@ -117,7 +117,7 @@ variable "deletion_protection" {
 }
 
 locals {
-  name_prefix = "routeshield-${var.environment}"
+  name_prefix         = "routeshield-${var.environment}"
   effective_web_image = var.web_image != "" ? var.web_image : var.image
   labels = {
     application = "routeshield"
@@ -248,16 +248,16 @@ resource "google_sql_database" "application" {
 }
 
 resource "google_redis_instance" "cache" {
-  name               = "${local.name_prefix}-redis"
-  project            = var.project_id
-  region             = var.region
-  tier               = "STANDARD_HA"
-  memory_size_gb     = var.redis_memory_size_gb
-  redis_version      = "REDIS_7_0"
-  display_name       = "RouteShield ${var.environment} cache"
-  authorized_network = google_compute_network.private.id
+  name                    = "${local.name_prefix}-redis"
+  project                 = var.project_id
+  region                  = var.region
+  tier                    = "STANDARD_HA"
+  memory_size_gb          = var.redis_memory_size_gb
+  redis_version           = "REDIS_7_0"
+  display_name            = "RouteShield ${var.environment} cache"
+  authorized_network      = google_compute_network.private.id
   transit_encryption_mode = "SERVER_AUTHENTICATION"
-  labels             = local.labels
+  labels                  = local.labels
 
   depends_on = [google_service_networking_connection.private_services]
 }
@@ -270,11 +270,17 @@ resource "google_storage_bucket" "evidence" {
   force_destroy               = false
   labels                      = local.labels
 
-  versioning { enabled = true }
+  versioning {
+    enabled = true
+  }
 
   lifecycle_rule {
-    condition { age = var.retention_days }
-    action { type = "Delete" }
+    condition {
+      age = var.retention_days
+    }
+    action {
+      type = "Delete"
+    }
   }
 
   lifecycle_rule {
@@ -282,7 +288,9 @@ resource "google_storage_bucket" "evidence" {
       age            = 30
       matches_prefix = ["quarantine/"]
     }
-    action { type = "Delete" }
+    action {
+      type = "Delete"
+    }
   }
 }
 
@@ -295,8 +303,12 @@ resource "google_storage_bucket" "audit_archive" {
   labels                      = local.labels
 
   lifecycle_rule {
-    condition { age = var.audit_retention_days }
-    action { type = "Delete" }
+    condition {
+      age = var.audit_retention_days
+    }
+    action {
+      type = "Delete"
+    }
   }
 }
 
@@ -349,7 +361,9 @@ resource "google_pubsub_subscription" "assessment_due" {
 
   push_config {
     push_endpoint = "${google_cloud_run_v2_service.api.uri}/v1/internal/assessments/due"
-    oidc_token { service_account_email = google_service_account.scheduler.email }
+    oidc_token {
+      service_account_email = google_service_account.scheduler.email
+    }
   }
 }
 
@@ -371,7 +385,9 @@ resource "google_pubsub_subscription" "notification_delivery" {
 
   push_config {
     push_endpoint = "${google_cloud_run_v2_service.api.uri}/v1/internal/notifications/dispatch"
-    oidc_token { service_account_email = google_service_account.scheduler.email }
+    oidc_token {
+      service_account_email = google_service_account.scheduler.email
+    }
   }
 }
 
@@ -413,9 +429,9 @@ resource "google_service_account_iam_member" "pubsub_push_token_creator" {
 
 resource "google_pubsub_topic_iam_member" "dead_letter_publisher" {
   project = var.project_id
-  topic    = google_pubsub_topic.notification_dead_letter.name
-  role     = "roles/pubsub.publisher"
-  member   = "serviceAccount:service-${data.google_project.current.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
+  topic   = google_pubsub_topic.notification_dead_letter.name
+  role    = "roles/pubsub.publisher"
+  member  = "serviceAccount:service-${data.google_project.current.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
 }
 
 resource "google_pubsub_subscription_iam_member" "delivery_subscriber" {
@@ -468,7 +484,9 @@ resource "google_secret_manager_secret" "runtime" {
   project   = var.project_id
   labels    = local.labels
 
-  replication { auto {} }
+  replication {
+    auto {}
+  }
 }
 
 resource "google_secret_manager_secret_iam_member" "api" {
@@ -510,7 +528,9 @@ resource "google_cloud_run_v2_service" "api" {
     containers {
       image = var.image
 
-      ports { container_port = 8080 }
+      ports {
+        container_port = 8080
+      }
 
       resources {
         limits = {
@@ -519,28 +539,94 @@ resource "google_cloud_run_v2_service" "api" {
         }
       }
 
-      env { name = "OIDC_ISSUER" value = var.oidc_issuer }
-      env { name = "OIDC_AUDIENCE" value = var.oidc_audience }
-      env { name = "OIDC_JWKS_URL" value = var.oidc_jwks_url }
-      env { name = "OIDC_ACTOR_ID_CLAIM" value = "sub" }
-      env { name = "OIDC_TENANT_ID_CLAIM" value = "tenant_id" }
-      env { name = "OIDC_ROLE_CLAIM" value = "role" }
-      env { name = "REQUIRE_OIDC" value = "true" }
-      env { name = "RATE_LIMIT_REDIS_REQUIRED" value = "true" }
-      env { name = "IDEMPOTENCY_TTL_SECONDS" value = "86400" }
-      env { name = "REQUIRE_IDEMPOTENCY" value = "true" }
-      env { name = "TENANT_AUTOMATION_ENABLED" value = "true" }
-      env { name = "DEMO_EVIDENCE_ENABLED" value = "false" }
-      env { name = "LLM_ENABLED" value = "false" }
-      env { name = "REACT_TOOL_CALLS_ENABLED" value = "false" }
-      env { name = "NOTIFICATIONS_ENABLED" value = "false" }
-      env { name = "APPROVAL_ACTIONS_ENABLED" value = "false" }
-      env { name = "MEMORY_READS_ENABLED" value = "true" }
-      env { name = "MEMORY_WRITES_ENABLED" value = "true" }
-      env { name = "RETENTION_DAYS" value = tostring(var.retention_days) }
-      env { name = "EVIDENCE_BUCKET" value = google_storage_bucket.evidence.name }
-      env { name = "ASSESSMENT_DUE_TOPIC" value = google_pubsub_topic.assessment_due.id }
-      env { name = "NOTIFICATION_DELIVERY_TOPIC" value = google_pubsub_topic.notification_delivery.id }
+      env {
+        name  = "OIDC_ISSUER"
+        value = var.oidc_issuer
+      }
+      env {
+        name  = "OIDC_AUDIENCE"
+        value = var.oidc_audience
+      }
+      env {
+        name  = "OIDC_JWKS_URL"
+        value = var.oidc_jwks_url
+      }
+      env {
+        name  = "OIDC_ACTOR_ID_CLAIM"
+        value = "sub"
+      }
+      env {
+        name  = "OIDC_TENANT_ID_CLAIM"
+        value = "tenant_id"
+      }
+      env {
+        name  = "OIDC_ROLE_CLAIM"
+        value = "role"
+      }
+      env {
+        name  = "REQUIRE_OIDC"
+        value = "true"
+      }
+      env {
+        name  = "RATE_LIMIT_REDIS_REQUIRED"
+        value = "true"
+      }
+      env {
+        name  = "IDEMPOTENCY_TTL_SECONDS"
+        value = "86400"
+      }
+      env {
+        name  = "REQUIRE_IDEMPOTENCY"
+        value = "true"
+      }
+      env {
+        name  = "TENANT_AUTOMATION_ENABLED"
+        value = "true"
+      }
+      env {
+        name  = "DEMO_EVIDENCE_ENABLED"
+        value = "false"
+      }
+      env {
+        name  = "LLM_ENABLED"
+        value = "false"
+      }
+      env {
+        name  = "REACT_TOOL_CALLS_ENABLED"
+        value = "false"
+      }
+      env {
+        name  = "NOTIFICATIONS_ENABLED"
+        value = "false"
+      }
+      env {
+        name  = "APPROVAL_ACTIONS_ENABLED"
+        value = "false"
+      }
+      env {
+        name  = "MEMORY_READS_ENABLED"
+        value = "true"
+      }
+      env {
+        name  = "MEMORY_WRITES_ENABLED"
+        value = "true"
+      }
+      env {
+        name  = "RETENTION_DAYS"
+        value = tostring(var.retention_days)
+      }
+      env {
+        name  = "EVIDENCE_BUCKET"
+        value = google_storage_bucket.evidence.name
+      }
+      env {
+        name  = "ASSESSMENT_DUE_TOPIC"
+        value = google_pubsub_topic.assessment_due.id
+      }
+      env {
+        name  = "NOTIFICATION_DELIVERY_TOPIC"
+        value = google_pubsub_topic.notification_delivery.id
+      }
       env {
         name  = "WEB_ORIGIN"
         value = var.web_domain != "" ? "https://${var.web_domain}" : ""
@@ -585,11 +671,13 @@ resource "google_cloud_run_v2_service" "web" {
     }
 
     containers {
-      image    = local.effective_web_image
-      command  = [".venv/bin/python", "-m", "uvicorn"]
-      args     = ["apps.web.server:app", "--host", "0.0.0.0", "--port", "8080"]
+      image   = local.effective_web_image
+      command = [".venv/bin/python", "-m", "uvicorn"]
+      args    = ["apps.web.server:app", "--host", "0.0.0.0", "--port", "8080"]
 
-      ports { container_port = 8080 }
+      ports {
+        container_port = 8080
+      }
 
       resources {
         limits = {
@@ -598,7 +686,10 @@ resource "google_cloud_run_v2_service" "web" {
         }
       }
 
-      env { name = "PUBLIC_API_BASE_URL" value = var.web_api_base_url }
+      env {
+        name  = "PUBLIC_API_BASE_URL"
+        value = var.web_api_base_url
+      }
     }
   }
 
@@ -669,14 +760,38 @@ resource "google_cloud_run_v2_job" "monitor" {
         command = [".venv/bin/python"]
         args    = ["-m", "workers.monitor"]
 
-        env { name = "REQUIRE_OIDC" value = "true" }
-        env { name = "RATE_LIMIT_REDIS_REQUIRED" value = "true" }
-        env { name = "REQUIRE_IDEMPOTENCY" value = "true" }
-        env { name = "TENANT_AUTOMATION_ENABLED" value = "true" }
-        env { name = "DEMO_EVIDENCE_ENABLED" value = "false" }
-        env { name = "LLM_ENABLED" value = "false" }
-        env { name = "REACT_TOOL_CALLS_ENABLED" value = "false" }
-        env { name = "RETENTION_DAYS" value = tostring(var.retention_days) }
+        env {
+          name  = "REQUIRE_OIDC"
+          value = "true"
+        }
+        env {
+          name  = "RATE_LIMIT_REDIS_REQUIRED"
+          value = "true"
+        }
+        env {
+          name  = "REQUIRE_IDEMPOTENCY"
+          value = "true"
+        }
+        env {
+          name  = "TENANT_AUTOMATION_ENABLED"
+          value = "true"
+        }
+        env {
+          name  = "DEMO_EVIDENCE_ENABLED"
+          value = "false"
+        }
+        env {
+          name  = "LLM_ENABLED"
+          value = "false"
+        }
+        env {
+          name  = "REACT_TOOL_CALLS_ENABLED"
+          value = "false"
+        }
+        env {
+          name  = "RETENTION_DAYS"
+          value = tostring(var.retention_days)
+        }
 
         dynamic "env" {
           for_each = local.runtime_secrets
@@ -772,8 +887,8 @@ resource "google_cloud_scheduler_job" "monitor" {
 
   http_target {
     http_method = "POST"
-    uri = "https://run.googleapis.com/v2/projects/${var.project_id}/locations/${var.region}/jobs/${google_cloud_run_v2_job.monitor.name}:run"
-    body = base64encode("{}")
+    uri         = "https://run.googleapis.com/v2/projects/${var.project_id}/locations/${var.region}/jobs/${google_cloud_run_v2_job.monitor.name}:run"
+    body        = base64encode("{}")
     headers = {
       "Content-Type" = "application/json"
     }
@@ -783,7 +898,7 @@ resource "google_cloud_scheduler_job" "monitor" {
     }
   }
 
-  depends_on = [google_cloud_run_v2_job_iam_member.scheduler_monitor_invoker]
+  depends_on = [google_cloud_run_v2_job_iam_binding.scheduler_monitor_invoker]
 }
 
 resource "google_cloud_scheduler_job" "notification_delivery" {
@@ -811,7 +926,9 @@ resource "google_cloud_scheduler_job" "retention" {
   http_target {
     http_method = "POST"
     uri         = "${google_cloud_run_v2_service.api.uri}/v1/internal/retention/run"
-    oidc_token { service_account_email = google_service_account.scheduler.email }
+    oidc_token {
+      service_account_email = google_service_account.scheduler.email
+    }
   }
 }
 
@@ -826,14 +943,16 @@ resource "google_cloud_scheduler_job" "privacy_deletion" {
   http_target {
     http_method = "POST"
     uri         = "${google_cloud_run_v2_service.api.uri}/v1/internal/privacy/deletion-requests/process"
-    oidc_token { service_account_email = google_service_account.scheduler.email }
+    oidc_token {
+      service_account_email = google_service_account.scheduler.email
+    }
   }
 }
 
 resource "google_monitoring_alert_policy" "cloud_run_errors" {
-  display_name = "${local.name_prefix} Cloud Run errors"
-  project      = var.project_id
-  combiner     = "OR"
+  display_name          = "${local.name_prefix} Cloud Run errors"
+  project               = var.project_id
+  combiner              = "OR"
   notification_channels = var.notification_channels
 
   conditions {
@@ -843,15 +962,18 @@ resource "google_monitoring_alert_policy" "cloud_run_errors" {
       comparison      = "COMPARISON_GT"
       threshold_value = 0
       duration        = "60s"
-      aggregations { alignment_period = "60s" per_series_aligner = "ALIGN_RATE" }
+      aggregations {
+        alignment_period   = "60s"
+        per_series_aligner = "ALIGN_RATE"
+      }
     }
   }
 }
 
 resource "google_monitoring_alert_policy" "cloud_sql_cpu" {
-  display_name = "${local.name_prefix} Cloud SQL CPU"
-  project      = var.project_id
-  combiner     = "OR"
+  display_name          = "${local.name_prefix} Cloud SQL CPU"
+  project               = var.project_id
+  combiner              = "OR"
   notification_channels = var.notification_channels
 
   conditions {
@@ -861,7 +983,10 @@ resource "google_monitoring_alert_policy" "cloud_sql_cpu" {
       comparison      = "COMPARISON_GT"
       threshold_value = 0.8
       duration        = "300s"
-      aggregations { alignment_period = "60s" per_series_aligner = "ALIGN_MEAN" }
+      aggregations {
+        alignment_period   = "60s"
+        per_series_aligner = "ALIGN_MEAN"
+      }
     }
   }
 }
@@ -903,9 +1028,9 @@ resource "google_logging_metric" "privacy_deletion_failed" {
 }
 
 resource "google_monitoring_alert_policy" "provider_unavailable" {
-  display_name         = "${local.name_prefix} provider unavailable"
-  project              = var.project_id
-  combiner             = "OR"
+  display_name          = "${local.name_prefix} provider unavailable"
+  project               = var.project_id
+  combiner              = "OR"
   notification_channels = var.notification_channels
 
   conditions {
@@ -915,15 +1040,18 @@ resource "google_monitoring_alert_policy" "provider_unavailable" {
       comparison      = "COMPARISON_GT"
       threshold_value = 0
       duration        = "300s"
-      aggregations { alignment_period = "60s" per_series_aligner = "ALIGN_DELTA" }
+      aggregations {
+        alignment_period   = "60s"
+        per_series_aligner = "ALIGN_DELTA"
+      }
     }
   }
 }
 
 resource "google_monitoring_alert_policy" "assessment_backlog" {
-  display_name         = "${local.name_prefix} assessment backlog"
-  project              = var.project_id
-  combiner             = "OR"
+  display_name          = "${local.name_prefix} assessment backlog"
+  project               = var.project_id
+  combiner              = "OR"
   notification_channels = var.notification_channels
 
   conditions {
@@ -933,15 +1061,18 @@ resource "google_monitoring_alert_policy" "assessment_backlog" {
       comparison      = "COMPARISON_GT"
       threshold_value = 100
       duration        = "300s"
-      aggregations { alignment_period = "60s" per_series_aligner = "ALIGN_MAX" }
+      aggregations {
+        alignment_period   = "60s"
+        per_series_aligner = "ALIGN_MAX"
+      }
     }
   }
 }
 
 resource "google_monitoring_alert_policy" "notification_failed" {
-  display_name         = "${local.name_prefix} notification failures"
-  project              = var.project_id
-  combiner             = "OR"
+  display_name          = "${local.name_prefix} notification failures"
+  project               = var.project_id
+  combiner              = "OR"
   notification_channels = var.notification_channels
 
   conditions {
@@ -951,15 +1082,18 @@ resource "google_monitoring_alert_policy" "notification_failed" {
       comparison      = "COMPARISON_GT"
       threshold_value = 0
       duration        = "300s"
-      aggregations { alignment_period = "60s" per_series_aligner = "ALIGN_DELTA" }
+      aggregations {
+        alignment_period   = "60s"
+        per_series_aligner = "ALIGN_DELTA"
+      }
     }
   }
 }
 
 resource "google_monitoring_alert_policy" "privacy_deletion_failed" {
-  display_name         = "${local.name_prefix} privacy deletion failures"
-  project              = var.project_id
-  combiner             = "OR"
+  display_name          = "${local.name_prefix} privacy deletion failures"
+  project               = var.project_id
+  combiner              = "OR"
   notification_channels = var.notification_channels
 
   conditions {
@@ -969,7 +1103,10 @@ resource "google_monitoring_alert_policy" "privacy_deletion_failed" {
       comparison      = "COMPARISON_GT"
       threshold_value = 0
       duration        = "300s"
-      aggregations { alignment_period = "60s" per_series_aligner = "ALIGN_DELTA" }
+      aggregations {
+        alignment_period   = "60s"
+        per_series_aligner = "ALIGN_DELTA"
+      }
     }
   }
 }

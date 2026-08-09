@@ -28,13 +28,15 @@ jobs:
       TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
       TF_VAR_runtime_invoker_members: '["serviceAccount:${{ secrets.GCP_DEPLOYER_SERVICE_ACCOUNT }}"]'
     steps:
-      - uses: actions/checkout@v4
-      - uses: google-github-actions/auth@v2
+      - uses: actions/checkout@v7
+      - uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_DEPLOYER_SERVICE_ACCOUNT }}
-      - uses: google-github-actions/setup-gcloud@v2
-      - uses: hashicorp/setup-terraform@v3
+      - uses: google-github-actions/setup-gcloud@v3
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
       - run: terraform -chdir=infra/terraform init -input=false -backend-config="bucket=$TF_STATE_BUCKET" -backend-config="prefix=routeshield/production"
       - name: Review production plan
         run: terraform -chdir=infra/terraform plan -input=false -out=production.tfplan -var="project_id=$PROJECT_ID" -var="region=$REGION" -var="environment=$ENVIRONMENT" -var="image=$IMAGE" -var="web_domain=${{ vars.WEB_DOMAIN }}" -var="web_api_base_url=${{ vars.WEB_API_BASE_URL }}" -var="oidc_issuer=${{ vars.OIDC_ISSUER }}" -var="oidc_audience=${{ vars.OIDC_AUDIENCE }}" -var="oidc_jwks_url=${{ vars.OIDC_JWKS_URL }}"

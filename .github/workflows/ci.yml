@@ -12,17 +12,21 @@ jobs:
   security:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Scan committed secrets
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
+      - uses: astral-sh/setup-uv@v9
+        with:
+          version: "latest"
+      - run: uv sync --all-groups --frozen
       - name: Audit locked Python dependencies
-        uses: pypa/gh-action-pip-audit@v1.1.0
+        run: uv run pip-audit --local
 
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v9
         with:
           version: "latest"
       - run: uv sync --all-groups --frozen
@@ -31,7 +35,9 @@ jobs:
       - name: Verify container build
         run: docker build --file infra/docker/Dockerfile --tag routeshield:${{ github.sha }} .
       - name: Validate Terraform formatting
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
       - run: terraform -chdir=infra/terraform fmt -check
       - run: terraform -chdir=infra/terraform init -backend=false -input=false
       - run: terraform -chdir=infra/terraform validate
